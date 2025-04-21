@@ -1,7 +1,7 @@
 
 # make sure to run renv::activate()!!!!
 # (Version guard) Ensure we have the correct lmFScreen
-expected <- "0.1.0"   # or whatever DESCRIPTION::Version() is
+expected <- "0.1.0" 
 actual   <- as.character(utils::packageVersion("lmFScreen"))
 if (actual != expected) {
   stop(sprintf(

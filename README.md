@@ -15,5 +15,6 @@ in your terminal.
  - `renv::restore()`
  
 It is important to run `renv::restore()` in the R console to install the required packages. This will create a virtual environment with the same package versions used in the original analysis. This ensures that the code runs correctly and produces the same results as in the paper.
+
 4. **Run** the figure scripts in the `figures` folder. For example, to run the script for type 1 error and power, run the following command in the R console: `source("power_t1error_global_null.R")`
 

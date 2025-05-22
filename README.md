@@ -27,7 +27,7 @@ The `figures/` directory contains R scripts to reproduce all plots from the pape
 ### 1. Power and Type I Error (Global and Local Null)
 - **Files:** `power_t1error_global_null.R`, `power_t1error_local_null.R`
 - **Description:**  
-  Demonstrates Type I error control of the selective p-value under the null and compares the power of the selective procedure with a sample-splitting approach.
+  Demonstrates Type I error control of the selective p-value under the null and compares the power of the selective procedure with a sample-splitting approach. `power_t1error_global_null.R` corresponds to Figure 4 in the paper, `power_t1error_local_null.R` corresponds to Figure C.1 in the supplementary material.
 
 ---
 
@@ -37,20 +37,20 @@ The `figures/` directory contains R scripts to reproduce all plots from the pape
   Compares the selective confidence intervals to naive intervals in terms of:
   - Coverage (selective vs. non-selective)
   - Width (one plot with the value of the true coefficient on the horizontal axis and one plot with the number of observations as the horizontal axis)
-
+`CI_globalnull.R` corresponds to Figure 5 in the paper, `CI_localnull.R` corresponds to Figure C.2 in the supplementary material.
 ---
 
 ### 3. Multiple Testing Adjustments
 - **File:** `multiple_corrections.R`
 - **Description:**  
-  Shows that traditional multiple testing corrections (Bonferroni, Scheffé) do **not** control Type I error after F-screening.
+  Shows that traditional multiple testing corrections (Bonferroni, Scheffé) do **not** control Type I error after F-screening. `multiple_corrections.R` corresponds to Figure A.1 in the supplementary material.
 
 ---
 
 ### 4. Selective vs. Naive Point Estimates
 - **File:** `point_estimates.R`
 - **Description:**  
-  Plots the selective vs. non-selective point estimates for the first coefficient, under the global null.
+  Plots the selective vs. non-selective point estimates for the first coefficient, under the global null. `point_estimates.R` corresponds to Figure B.1 in the supplementary material.
 
 ---
 

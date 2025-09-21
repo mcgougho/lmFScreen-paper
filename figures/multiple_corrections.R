@@ -27,6 +27,7 @@ p.1n <- rep(NA, nreps)       # unadjusted p-value for group B (vs. baseline A)
 p.1b <- rep(NA, nreps)       # Bonferroni-adjusted (×2)
 p.1b3 <- rep(NA, nreps)      # Bonferroni-adjusted (×3)
 p.1s <- rep(NA, nreps)       # Scheffé-adjusted
+p.1closed <- rep(NA, nreps)  # Closed testing
 psel.1 <- rep(NA, nreps)     # Selection-adjusted
 
 # make design matrix
@@ -38,26 +39,26 @@ beta <- rep(0, n_group)
 for (i in 1:nreps) {
   # Generate the group factor and design matrix X (baseline is group A)
   y <- X %*% beta + rnorm(n_group * n_per_group) * sigma
-
+  
   # Fit the linear model using lm:
   lm_model <- lm(y ~ X + 0)
-
+  
   # Overall test: compare the full model to the null model (only intercept)
   lm_null <- lm(y ~ 1)
   anova_out <- anova(lm_null, lm_model)
   # Extract the p-value for the additional predictors (i.e. the group effect)
   p.overall[i] <- anova_out$`Pr(>F)`[2]
-
+  
   # Extract the summary to get the coefficient for groupB
   lm_summary <- summary(lm_model)
   # The coefficient named "XgroupB" compares group B vs. baseline A.
   p_raw <- lm_summary$coefficients["Xgroupb", "Pr(>|t|)"]
   p.1n[i] <- p_raw
-
+  
   # Bonferroni correction for 2 and 3 tests (overall and pairwise)
   p.1b[i] <- ifelse(p_raw <= 1/2, 2 * p_raw, 1)
   p.1b3[i] <- ifelse(p_raw <= 1/3, 3 * p_raw, 1)
-
+  
   # Scheffé adjustment:
   # 1. Extract the t-statistic for the groupB coefficient.
   t_stat <- lm_summary$coefficients["Xgroupb", "t value"]
@@ -67,7 +68,10 @@ for (i in 1:nreps) {
   df_error <- n_per_group * n_group - ncol(X)
   # 4. Compute the Scheffé p-value from the F distribution:
   p.1s[i] <- 1 - pf(F_stat, df1 = n_group - 1, df2 = df_error)
-
+  
+  # Closed testing p-value
+  p.1closed[i] <- max(p.overall[i], p_raw)
+  
   # Compute the Selective p-value:
   Xy_centered <- lmFScreen:::get_Xy_centered(X.1,y)
   X_centered <- Xy_centered$X
@@ -95,6 +99,9 @@ empqs.b3 <- quantile(emp.cdf.b3, qs)
 emp.cdf.s <- ecdf(p.1s)
 empqs.s <- quantile(emp.cdf.s, qs)
 
+emp.cdf.closed <- ecdf(p.1closed)
+empqs.closed <- quantile(emp.cdf.closed, qs)
+
 emp.cdf.sel <- ecdf(psel.1)
 empqs.sel <- quantile(emp.cdf.sel, qs)
 
@@ -112,6 +119,9 @@ empqs.b3.mask <- quantile(emp.cdf.b3.mask, qs)
 emp.cdf.s.mask <- ecdf(p.1s[mask])
 empqs.s.mask <- quantile(emp.cdf.s.mask, qs)
 
+emp.cdf.closed.mask <- ecdf(p.1closed[mask])
+empqs.closed.mask <- quantile(emp.cdf.closed.mask, qs)
+
 emp.cdf.sel.mask <- ecdf(psel.1[mask])
 empqs.sel.mask <- quantile(emp.cdf.sel.mask, qs)
 
@@ -123,10 +133,11 @@ df_unconditional <- data.frame(
   Bonferroni_2 = empqs.b,
   Bonferroni_3 = empqs.b3,
   Scheffe = empqs.s,
+  Closed = empqs.closed,
   Selective = empqs.sel
 ) %>%
   pivot_longer(cols = -Theoretical, names_to = "Method", values_to = "Empirical") %>%
-  mutate(Method = factor(Method, levels = c("No_Correction", "Bonferroni_2", "Bonferroni_3", "Scheffe", "Selective")))
+  mutate(Method = factor(Method, levels = c("No_Correction", "Bonferroni_2", "Bonferroni_3", "Scheffe", "Closed", "Selective")))
 
 df_conditional <- data.frame(
   Theoretical = theorqs,
@@ -134,16 +145,18 @@ df_conditional <- data.frame(
   Bonferroni_2 = empqs.b.mask,
   Bonferroni_3 = empqs.b3.mask,
   Scheffe = empqs.s.mask,
+  Closed = empqs.closed.mask,
   Selective = empqs.sel.mask
 ) %>%
   pivot_longer(cols = -Theoretical, names_to = "Method", values_to = "Empirical") %>%
-  mutate(Method = factor(Method, levels = c("No_Correction", "Bonferroni_2", "Bonferroni_3", "Scheffe", "Selective")))
+  mutate(Method = factor(Method, levels = c("No_Correction", "Bonferroni_2", "Bonferroni_3", "Scheffe", "Closed", "Selective")))
 
 colors <- c(
   "No_Correction" = "#000000",    # Black
   "Bonferroni_2" = "#E69F00",     # Orange
   "Bonferroni_3" = "#009E73",     # Teal/Green
   "Scheffe" = "#0072B2",          # Blue
+  "Closed" = "#F0E442",           # Yellow
   "Selective" = "#CC79A7"         # Purple/Magenta
 )
 
@@ -152,6 +165,7 @@ labels <- c(
   "Bonferroni_2" = expression(2 * p[H[0]^M]),
   "Bonferroni_3" = expression(3 * p[H[0]^M]),
   "Scheffe" = "Scheffé",
+  "Closed" = "Closed",
   "Selective" = "Selective"
 )
 

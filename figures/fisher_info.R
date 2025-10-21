@@ -10,11 +10,6 @@ if (actual != expected) {
 }
 
 library(lmFScreen)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(patchwork)
-
 
 fisher_info_sel <- function(X, Y, beta1, beta_minus_1, n, p, sigma){
   beta <- as.matrix(c(beta1,beta_minus_1))

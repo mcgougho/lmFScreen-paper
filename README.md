@@ -66,7 +66,7 @@ The `figures/` directory contains R scripts to reproduce all plots from the pape
 ### 6. Assumption violation sensitivity
 - **File:** `sensitivity.R`
 - **Description:**  
-  Shows the sensitivity of the selective p-value to violations of the assumptions (homoscedasticity, normality). `sensitivity.R` corresponds to Figures D.3, D.4, and D.5 in the appendix of ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113).
+  Shows the sensitivity of the selective p-value to violations of the assumptions (homoskedasticity, normality). `sensitivity.R` corresponds to Figures D.3, D.4, and D.5 in the appendix of ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113).
   
 ---
 

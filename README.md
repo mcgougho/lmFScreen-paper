@@ -26,10 +26,10 @@ It is important to run `renv::restore()` in the R console to install the require
 
 The `figures/` directory contains R scripts to reproduce all plots from the paper.
 
-### 1. Power and Type I Error (Global and Local Null)
+### 1. Power and Type I Error 
 - **Files:** `power_t1error_global_null.R`, `power_t1error_local_null.R`
 - **Description:**  
-  Demonstrates Type I error control of the selective p-value under the null and compares the power of the selective procedure with a sample-splitting approach. `power_t1error_global_null.R` corresponds to Figure 4 in the paper ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113), `power_t1error_local_null.R` corresponds to Figure C.1 in the appendix.
+  Demonstrates Type I error control of the selective p-value under the null and compares the power of the selective procedure with a sample-splitting approach. `power_t1error_global_null.R` corresponds to Figure 4 in the paper ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113), `power_t1error_local_null.R` corresponds to Figure D.1 in the appendix.
 
 ---
 
@@ -39,7 +39,7 @@ The `figures/` directory contains R scripts to reproduce all plots from the pape
   Compares the selective confidence intervals to naive intervals in terms of:
   - Coverage (selective vs. non-selective)
   - Width (one plot with the value of the true coefficient on the horizontal axis and one plot with the number of observations as the horizontal axis)
-`CI_globalnull.R` corresponds to Figure 5 in ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113), `CI_localnull.R` corresponds to Figure C.2 in the appendix.
+`CI_globalnull.R` corresponds to Figure 5 in ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113), `CI_localnull.R` corresponds to Figure D.2 in the appendix.
 ---
 
 ### 3. Multiple Testing Adjustments

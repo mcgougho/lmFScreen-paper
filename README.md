@@ -49,11 +49,24 @@ The `figures/` directory contains R scripts to reproduce all plots from the pape
 
 ---
 
-### 4. Selective vs. Naive Point Estimates
+### 4. Comparison to [Heller et al.](https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/rssb.12318)
+- **File:** `heller_comparison.R`
+- **Description:**  
+  Compares the performance of the method proposed in the paper ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113) to the method of ["Post-selection estimation and testing following aggregate association tests"](https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/rssb.12318) in the setting of F-screening. `heller_comparison.R` corresponds to Figure B.1 in the appendix of ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113).
+  
+---
+
+### 5. Selective vs. Naive Point Estimates
 - **File:** `point_estimates.R`
 - **Description:**  
-  Plots the selective vs. non-selective point estimates for the first coefficient, under the global null. `point_estimates.R` corresponds to Figure B.1 in the the appendix of ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113).
+  Plots the selective vs. non-selective point estimates for the first coefficient, under the global null. `point_estimates.R` corresponds to Figure C.1 in the the appendix of ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113).
 
 ---
 
+### 6. Assumption violation sensitivity
+- **File:** `sensitivity.R`
+- **Description:**  
+  Shows the sensitivity of the selective p-value to violations of the assumptions (homoscedasticity, normality). `sensitivity.R` corresponds to Figures D.3, D.4, and D.5 in the appendix of ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113).
+  
+---
 

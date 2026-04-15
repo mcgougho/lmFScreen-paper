@@ -85,7 +85,7 @@ for (a in seq_along(alpha_seq)) {
     }
     
     # Get confidence intervals using the unknown variance method (with known sigma^2)
-    out <- lmFScreen.fit(X, y, test_cols = test_col, alpha = current_alpha, alpha_ov = alpha_ov, B = B)[["selective CIs"]]
+    out <- lmFScreen:::lmFScreen.fit(X, y, test_cols = test_col, alpha = current_alpha, alpha_ov = alpha_ov, B = B)[["selective CIs"]]
     CIs[iter, 1] <- out[test_col, 1]
     CIs[iter, 2] <- out[test_col, 2]
     
@@ -205,7 +205,7 @@ for (b in seq_along(beta1_values)) {
     }
     
     # lmFScreen CI (default)
-    CIs_lmfscreen_globalnull[iter, ] <- lmFScreen.fit(X, y_globalnull, test_cols = test_col,
+    CIs_lmfscreen_globalnull[iter, ] <- lmFScreen:::lmFScreen.fit(X, y_globalnull, test_cols = test_col,
                                                       alpha = alpha_ci, alpha_ov = alpha_ov, B = B)[["selective CIs"]][test_col, ]
     
   }
@@ -292,7 +292,7 @@ for (i in seq_along(n_values)) {
     }
     
     # lmFScreen CI (default)
-    CIs_lmfscreen_n[iter, ] <- lmFScreen.fit(X, y, test_cols = test_col,
+    CIs_lmfscreen_n[iter, ] <- lmFScreen:::lmFScreen.fit(X, y, test_cols = test_col,
                                              alpha = alpha_ci, alpha_ov = alpha_ov, B = B)[["selective CIs"]][test_col, ]
     
   }

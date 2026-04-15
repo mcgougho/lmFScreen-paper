@@ -1,6 +1,6 @@
 # lmFScreen-paper
 
-This repository contains R scripts to reproduce all figures for the paper ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113), using a frozen snapshot of the **lmFScreen** package.
+This repository contains R scripts to reproduce all figures for the paper ["Valid F-screening in linear regression"](https://arxiv.org/abs/2505.23113), using a frozen `renv` environment and version 0.2.0 of the **lmFScreen** package.
 
 ---
 
@@ -9,10 +9,12 @@ This repository contains R scripts to reproduce all figures for the paper ["Vali
 1. **Clone** this repo with `git clone https://github.com/mcgougho/lmFScreen-paper.git`
 in your terminal. 
 2. In RStudio, **open** the `lmFScreen-paper.Rproj` file.
-3. **Install** the required packages by running the following command in the R console:
- - `install.packages("renv")`
- - `renv::activate()`
- - `renv::restore()`
+3. In the R console, install and restore the project environment:
+   - `install.packages("renv")`
+   - `renv::activate()`
+   - `renv::restore()`
+
+This will recreate the project library using the package versions recorded in `renv.lock`, ensuring that the code runs with the same software environment used for the analysis.
  
 It is important to run `renv::restore()` in the R console to install the required packages. This will create a virtual environment with the same package versions used in the original analysis. This ensures that the code runs correctly and produces the same results as in the paper.
 

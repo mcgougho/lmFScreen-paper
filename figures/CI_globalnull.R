@@ -1,7 +1,7 @@
 
 # make sure to run renv::activate()!!!!
 # (Version guard) Ensure we have the correct lmFScreen
-expected <- "0.1.0" 
+expected <- "0.2.0" 
 actual   <- as.character(utils::packageVersion("lmFScreen"))
 if (actual != expected) {
   stop(sprintf(
@@ -20,98 +20,87 @@ library(patchwork)
 set.seed(1)
 
 # Set parameters
-print("Setting parameters...")
 n <- 100
 p <- 5
 beta <- rep(0,p)
-sigma <- 1  # True sigma value
+sigma <- 1  
 test_col <- 1
 B <- 10000
 alpha_ov <- 0.05
 colors <- c(
-  "Selective CI (oracle)" = "#E69F00",
-  "Selective CI (debiased)" = "#0072B2",
+  "Selective CI" = "#E69F00",
   "Standard CI" = "#CC79A7"
 )
 labels <- c(
-  "Selective CI (oracle)" = "Selective~CI~(sigma^2)",
-  "Selective CI (debiased)" = "Selective~CI~(tilde(sigma)^2)",
+  "Selective CI " = "Selective~CI",
   "Standard CI" = "Standard~CI"
 )
 
 
 ############################# coverage ###################################
 
+n_iter <- 1000
 
-n_iter <- 5000
 # Sequence of alpha values to test
 alpha_seq <- seq(0.01, 0.95, length.out = 10)
 
 # Prepare lists to store confidence intervals for each alpha value
-CIs_DB_list <- vector("list", length(alpha_seq))
-CIs_oracle_list <- vector("list", length(alpha_seq))
+CIs_list <- vector("list", length(alpha_seq))
 CIs_naive_list <- vector("list", length(alpha_seq))  # Naïve CI storage
 
 # Loop over each alpha value
 for (a in seq_along(alpha_seq)) {
   current_alpha <- alpha_seq[a]
   cat("Running for alpha =", current_alpha, "\n")
-
+  
   # Create matrices to store CIs for the current alpha value
-  CIs_DB <- matrix(NA, nrow = n_iter, ncol = 2)
-  CIs_oracle <- matrix(NA, nrow = n_iter, ncol = 2)
+  CIs <- matrix(NA, nrow = n_iter, ncol = 2)
   CIs_naive <- matrix(NA, nrow = n_iter, ncol = 2)  # Naïve CI storage
-
+  
   # Run iterations for the current alpha value
   for (iter in 1:n_iter) {
     if(iter %% 100 == 0) cat("Iteration:", iter, "\n")
-
+    
     repeat {
       X <- matrix(rnorm(n * p), ncol = p)
       y <- X %*% beta + rnorm(n) * sigma
-
+      
       # Project out the intercept
       Xy_info <- lmFScreen:::get_Xy_centered(X,y)
       X <- Xy_info$X
       y <- Xy_info$y
-
+      
       # Compute test statistic
       U <- svd(X)$u
       yPy <- sum((t(U) %*% y)^2)
       rss <- sum(y^2) - yPy
       F_statistic <- (yPy / rss)
-
+      
       # Check if we pass the F-test threshold
       cc <- p/(n-p-1) * qf(1 - alpha_ov, p, (n - p - 1))
       if (F_statistic >= cc) {
         break
       }
     }
-
-    # Get confidence intervals using the DB method
-    out_DB <- lmFScreen.fit(X, y, test_cols = test_col, alpha = current_alpha, alpha_ov = alpha_ov, seed = iter, B = B)[["selective CIs"]]
-    CIs_DB[iter, 1] <- out_DB[test_col, 1]
-    CIs_DB[iter, 2] <- out_DB[test_col, 2]
-
-    # Get confidence intervals using the oracle method (with known sigma^2)
-    out_oracle <- lmFScreen.fit(X, y, test_cols = test_col, alpha = current_alpha, alpha_ov = alpha_ov, sigma_sq = sigma^2, seed = iter, B = B)[["selective CIs"]]
-    CIs_oracle[iter, 1] <- out_oracle[test_col, 1]
-    CIs_oracle[iter, 2] <- out_oracle[test_col, 2]
-
+    
+    # Get confidence intervals using the unknown variance method (with known sigma^2)
+    out <- lmFScreen.fit(X, y, test_cols = test_col, alpha = current_alpha, alpha_ov = alpha_ov, B = B)[["selective CIs"]]
+    CIs[iter, 1] <- out[test_col, 1]
+    CIs[iter, 2] <- out[test_col, 2]
+    
     # Compute Naïve 95% Confidence Interval
     lm_naive <- lm(y ~ X + 0)  # Fit linear model without intercept
     beta_hat <- coef(lm_naive)[test_col]
     se_beta <- summary(lm_naive)$coefficients[test_col, 2]  # Standard error
     z_crit <- qnorm(1 - current_alpha / 2)
-
+    
     # Store Naïve CI
     CIs_naive[iter, 1] <- beta_hat - z_crit * se_beta
     CIs_naive[iter, 2] <- beta_hat + z_crit * se_beta
   }
-
+  
   # Save the results for this alpha
-  CIs_DB_list[[a]] <- CIs_DB
-  CIs_oracle_list[[a]] <- CIs_oracle
+  CIs_list[[a]] <- CIs
   CIs_naive_list[[a]] <- CIs_naive  # Store naïve CIs
 }
 
@@ -123,28 +112,24 @@ compute_coverage <- function(CI_list, true_value = 0) {
 }
 
 # Compute empirical coverage for all methods
-coverage_DB <- compute_coverage(CIs_DB_list)
-coverage_oracle <- compute_coverage(CIs_oracle_list)
+coverage <- compute_coverage(CIs_list)
 coverage_naive <- compute_coverage(CIs_naive_list)  # Compute naïve coverage
 
 # Prepare data for plotting
 coverage_results <- data.frame(
   nominal_coverage = 1 - alpha_seq,  # Nominal coverage (1 - alpha)
-  coverage_DB = coverage_DB,         # Empirical coverage for Debiased method
-  coverage_oracle = coverage_oracle, # Empirical coverage for Oracle method
+  coverage = coverage, # Empirical coverage for unknown variance method
   coverage_naive = coverage_naive    # Empirical coverage for Naïve method
 )
 
 # Reshape data using tidyr::pivot_longer
 coverage_results_renamed <- coverage_results %>%
   rename(
-    "Selective CI (oracle)" = coverage_oracle,
-    "Selective CI (debiased)" = coverage_DB,
+    "Selective CI" = coverage,
     "Standard CI" = coverage_naive
   ) %>%
   pivot_longer(-nominal_coverage, names_to = "Method", values_to = "Coverage")
 
-coverage_results_renamed$Method <- factor(coverage_results_renamed$Method, levels = names(colors))
 
 p1 <- ggplot(coverage_results_renamed, aes(x = nominal_coverage, y = Coverage, color = Method)) +
   geom_line(linewidth = 1.2) +
@@ -162,16 +147,17 @@ p1 <- ggplot(coverage_results_renamed, aes(x = nominal_coverage, y = Coverage, c
   ) +
   scale_color_manual(values = colors, labels = parse(text = labels))
 
+print(p1)
 
 ########################## widths, changing beta1 #########################
 
 n_iter <- 1000
+
 beta1_values <- seq(-1, 1, length.out = 40)  # True beta1 values
 alpha_ci <- 0.05  # Only compute 95% CIs
 
 # Prepare lists to store CI widths for each beta1 value
 widths_lmfscreen_globalnull <- numeric(length(beta1_values))
-widths_lmfscreen_oracle_globalnull <- numeric(length(beta1_values))
 
 # Function to compute CI width
 compute_CI_width <- function(CI_matrix) {
@@ -181,55 +167,50 @@ compute_CI_width <- function(CI_matrix) {
 # Loop over each true beta1 value
 for (b in seq_along(beta1_values)) {
   beta1 <- beta1_values[b]
-
+  
   cat("Running for beta1 =", beta1, "\n")
-
+  
   # Set up beta vector for Global Null case
   beta_globalnull <- rep(0, p)
   beta_globalnull[1] <- beta1
-
+  
   # Create matrices to store CIs
   CIs_lmfscreen_globalnull <- matrix(NA, nrow = n_iter, ncol = 2)
-  CIs_lmfscreen_oracle_globalnull <- matrix(NA, nrow = n_iter, ncol = 2)  # New for oracle method
-
+  
   # Run iterations
   for (iter in 1:n_iter) {
     if (iter %% 100 == 0) cat("Iteration:", iter, "\n")
-
+    
     repeat {
       X <- matrix(rnorm(n * p), ncol = p)
       y_globalnull <- X %*% beta_globalnull + rnorm(n) * sigma
-
+      
       # Project out the intercept
       Xy_info <- lmFScreen:::get_Xy_centered(X,y_globalnull)
       X <- Xy_info$X
       y_globalnull <- Xy_info$y
-
+      
       # Compute test statistic
       U <- svd(X)$u
       yPy <- sum((t(U) %*% y_globalnull)^2)
       rss <- sum(y_globalnull^2) - yPy
       F_statistic <- (yPy / rss)
-
+      
       # Check if we pass the F-test threshold
       cc <- p / (n - p - 1) * qf(1 - alpha_ov, p, (n - p - 1))
       if (F_statistic >= cc) {
         break
       }
     }
-
+    
     # lmFScreen CI (default)
     CIs_lmfscreen_globalnull[iter, ] <- lmFScreen.fit(X, y_globalnull, test_cols = test_col,
                                                       alpha = alpha_ci, alpha_ov = alpha_ov, B = B)[["selective CIs"]][test_col, ]
-
-    # lmFScreen CI with known sigma^2 (oracle method)
-    CIs_lmfscreen_oracle_globalnull[iter, ] <- lmFScreen.fit(X, y_globalnull, test_cols = test_col,
-                                                             alpha = alpha_ci, alpha_ov = alpha_ov, sigma_sq = sigma^2, B = B)[["selective CIs"]][test_col, ]
+    
   }
-
+  
   # Compute average CI widths
   widths_lmfscreen_globalnull[b] <- compute_CI_width(CIs_lmfscreen_globalnull)
-  widths_lmfscreen_oracle_globalnull[b] <- compute_CI_width(CIs_lmfscreen_oracle_globalnull)
 }
 
 
@@ -237,20 +218,15 @@ for (b in seq_along(beta1_values)) {
 widths_globalnull <- data.frame(
   beta1 = beta1_values,
   lmfscreen = widths_lmfscreen_globalnull,
-  lmfscreen_oracle = widths_lmfscreen_oracle_globalnull,
   naive = NA
 )
 
 widths_globalnull_renamed <- widths_globalnull %>%
   rename(
-    "Selective CI (oracle)" = lmfscreen_oracle,
-    "Selective CI (debiased)" = lmfscreen,
+    "Selective CI" = lmfscreen,
     "Standard CI" = naive
   ) %>%
   pivot_longer(-beta1, names_to = "Method", values_to = "Width")
-
-widths_globalnull_renamed$Method <- factor(widths_globalnull_renamed$Method, levels = names(colors))
-
 
 p2 <- ggplot(widths_globalnull_renamed, aes(x = beta1, y = Width, color = Method)) +
   geom_line(linewidth = 1.2) +
@@ -267,87 +243,75 @@ p2 <- ggplot(widths_globalnull_renamed, aes(x = beta1, y = Width, color = Method
   ) +
   scale_color_manual(values = colors, labels = parse(text = labels))
 
-
+print(p2)
 
 ######################### widths, changing n ################################
 
-n_iter <- 1000
 n_values <- seq(50, 500, length.out = 10)
 
 # Prepare lists to store CI widths for each sample size
 widths_lmfscreen_n <- numeric(length(n_values))
-widths_lmfscreen_oracle_n <- numeric(length(n_values))
 
 # Loop over each sample size
 for (i in seq_along(n_values)) {
   n <- n_values[i]
-
+  
   cat("Running for sample size n =", n, "\n")
-
+  
   # Set up beta vector for Global Null case
   beta_null <- rep(0, p)
-
+  
   # Create matrices to store CIs
   CIs_lmfscreen_n <- matrix(NA, nrow = n_iter, ncol = 2)
-  CIs_lmfscreen_oracle_n <- matrix(NA, nrow = n_iter, ncol = 2)
-
+  
   # Run iterations
   for (iter in 1:n_iter) {
     if (iter %% 100 == 0) cat("Iteration:", iter, "\n")
-
+    
     repeat {
       X <- matrix(rnorm(n * p), ncol = p)
       y <- X %*% beta_null + rnorm(n) * sigma  # Under the global null
-
+      
       # Project out the intercept
       Xy_info <- lmFScreen:::get_Xy_centered(X,y)
       X <- Xy_info$X
       y <- Xy_info$y
-
+      
       # Compute test statistic
       U <- svd(X)$u
       yPy <- sum((t(U) %*% y)^2)
       rss <- sum(y^2) - yPy
       F_statistic <- (yPy / rss)
-
+      
       # Check if we pass the F-test threshold
       cc <- p / (n - p - 1) * qf(1 - alpha_ov, p, (n - p - 1))
       if (F_statistic >= cc) {
         break
       }
     }
-
+    
     # lmFScreen CI (default)
     CIs_lmfscreen_n[iter, ] <- lmFScreen.fit(X, y, test_cols = test_col,
                                              alpha = alpha_ci, alpha_ov = alpha_ov, B = B)[["selective CIs"]][test_col, ]
-
-    # lmFScreen CI with known sigma^2 (oracle method)
-    CIs_lmfscreen_oracle_n[iter, ] <- lmFScreen.fit(X, y, test_cols = test_col,
-                                                    alpha = alpha_ci, alpha_ov = alpha_ov, sigma_sq = sigma^2, B = B)[["selective CIs"]][test_col, ]
+    
   }
-
+  
   # Compute average CI widths
   widths_lmfscreen_n[i] <- compute_CI_width(CIs_lmfscreen_n)
-  widths_lmfscreen_oracle_n[i] <- compute_CI_width(CIs_lmfscreen_oracle_n)
 }
 
 widths_n <- data.frame(
   n = n_values,
   lmfscreen = widths_lmfscreen_n,
-  lmfscreen_oracle = widths_lmfscreen_oracle_n,
   naive = NA
 )
 
 widths_n_renamed <- widths_n %>%
   rename(
-    "Selective CI (debiased)" = lmfscreen,
-    "Selective CI (oracle)" = lmfscreen_oracle,
+    "Selective CI" = lmfscreen,
     "Standard CI" = naive
   ) %>%
   pivot_longer(-n, names_to = "Method", values_to = "Width")
-
-widths_n_renamed$Method <- factor(widths_n_renamed$Method, levels = names(colors))
-
 
 p3 <- ggplot(widths_n_renamed, aes(x = n, y = Width, color = Method)) +
   geom_line(linewidth = 1.2) +
@@ -364,6 +328,7 @@ p3 <- ggplot(widths_n_renamed, aes(x = n, y = Width, color = Method)) +
   ) +
   scale_color_manual(values = colors, labels = parse(text = labels))
 
+print(p3)
 
 ################################ final plot ######################################
 

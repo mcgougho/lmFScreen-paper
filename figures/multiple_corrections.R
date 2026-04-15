@@ -1,6 +1,6 @@
 # make sure to run renv::activate()!!!!
 # (Version guard) Ensure we have the correct lmFScreen
-expected <- "0.1.0"  
+expected <- "0.2.0"  
 actual   <- as.character(utils::packageVersion("lmFScreen"))
 if (actual != expected) {
   stop(sprintf(
@@ -76,7 +76,7 @@ for (i in 1:nreps) {
   Xy_centered <- lmFScreen:::get_Xy_centered(X.1,y)
   X_centered <- Xy_centered$X
   y_centered <- Xy_centered$y
-  pselb <- lmFScreen:::get_pselb(X=X_centered,y=y_centered,sigma_sq=sigma^2,alpha_ov=0.05,B=100000,min_select=10000, seed = 123*i )
+  pselb <- get_pselb(X=X_centered,y=y_centered,alpha_ov=0.05,B=10000,min_select=1000)
   psel.1[i] <- pselb(0)
 }
 

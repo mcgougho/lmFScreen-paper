@@ -1,6 +1,6 @@
 # make sure to run renv::activate()!!!!
 # (Version guard) Ensure we have the correct lmFScreen
-expected <- "0.1.0"   
+expected <- "0.2.0"   
 actual   <- as.character(utils::packageVersion("lmFScreen"))
 if (actual != expected) {
   stop(sprintf(
@@ -20,8 +20,6 @@ n <- 100
 p <- 10
 sigma <- 1
 beta <- rep(0,p)
-Zs <- rchisq(10000, n-p-1)
-As <- rchisq(10000, p)
 
 
 ############################## Type 1 error figure ################################
@@ -30,8 +28,7 @@ niter <- 10000
 alpha <- 0.05
 F.quantile <- qf(1 - alpha, p, (n - p - 1))
 cc <- p / (n - p - 1) * F.quantile
-scaling <- mean(Zs[As >= cc*Zs])
-p_naive <- psel_oracle <- psel_DB <- psel_plugin <- rep(NA, niter)
+p_naive <- psel <- rep(NA, niter)
 for(iter in 1:niter){
   repeat {
     X <- matrix(rnorm(n * p), ncol = p)
@@ -49,43 +46,29 @@ for(iter in 1:niter){
   }
   mod <- lm(y~X+0)
   p_naive[iter] <- summary(mod)$coef[1,4]
-  sigma_sq <- sigma^2
-  psel <- lmFScreen:::get_pselb(X=X,y=y,sigma_sq=sigma_sq,yPy=yPy,rss=rss,seed=iter,alpha_ov=0.05,min_select=100)
-  psel_oracle[iter] <- psel(0)
-  sigma_sq <- rss/scaling
-  pselb <- lmFScreen:::get_pselb(X=X,y=y,sigma_sq=sigma_sq,yPy=yPy,rss=rss,seed=iter,alpha_ov=0.05,min_select=100)
-  psel_DB[iter] <- pselb(0)
-  sigma_sq <- rss/(n-p-1)
-  pselb <- lmFScreen:::get_pselb(X=X,y=y,sigma_sq=sigma_sq,yPy=yPy,rss=rss,seed=iter,alpha_ov=0.05,min_select=100)
-  psel_plugin[iter] <- pselb(0)
+  pselb <- get_pselb(X=X,y=y,alpha_ov=0.05,min_select=10)
+  psel[iter] <- pselb(0)
 }
 
 qs <- seq(from = 0, to = 1, length.out = 1000)
 theorqs <- qunif(qs)
 emp.cdf.naive <- ecdf(p_naive)
 empqs.naive <- quantile(emp.cdf.naive, qs)
-emp.cdf.oracle <- ecdf(psel_oracle)
-empqs.oracle <- quantile(emp.cdf.oracle, qs)
-emp.cdf.DB <- ecdf(psel_DB)
-empqs.DB <- quantile(emp.cdf.DB, qs)
-emp.cdf.plugin <- ecdf(psel_plugin)
-empqs.plugin <- quantile(emp.cdf.plugin, qs)
+emp.cdf <- ecdf(psel)
+empqs <- quantile(emp.cdf, qs)
 
 par(pty = "s")
 plot(theorqs, empqs.naive, type = "l", lwd=3, xlab = "Uniform Theoretical Quantiles", ylab = "Empirical Quantiles", xlim = c(0, 1), ylim = c(0, 1), col = "black")
-lines(theorqs, empqs.oracle, lwd=3, col = "purple2")
-lines(theorqs, empqs.DB, lwd=3, col = "blue")
-lines(theorqs, empqs.plugin,lwd=3, col = "lightblue")
+lines(theorqs, empqs, lwd=3, col = "purple2")
 segments(0, 0, 1, 1, col = "red")
-legend("topleft", pch=15, col=c("black", "purple2", "blue" , "lightblue"), c(expression(p[H[0]^M]), expression(p[H[0]^M*"|"*E]), expression(p[H[0]^M*"|"*E]^{tilde(sigma)^2}), expression(p[H[0]^M*"|"*E]^{hat(sigma)^2})))
-
+legend("topleft", pch=15, col=c("black", "purple2"), c(expression(p[H[0]^M]), expression(p[H[0]^M*"|"*E])))
 
 
 ############################## Power figures ################################
 
 pr_reject_split <- function(beta1,n,p,alpha_ov,prop_train=0.5,sigma=1){
   if (beta1 == 0){nreps = 50000}
-  else{nreps <- round(5000/beta1)}
+  else{nreps <- round(5000/(5*beta1))}
   computeFstat <- rep(FALSE, nreps)
   pvals.split  <- rep(NA, nreps)
   beta[1] <- beta1
@@ -118,16 +101,14 @@ pr_reject_split <- function(beta1,n,p,alpha_ov,prop_train=0.5,sigma=1){
 }
 
 
-pr_reject_sel <- function(beta1,n,p,alpha_ov,sigma=1,oracle=TRUE){
+pr_reject_sel <- function(beta1,n,p,alpha_ov){
   if (beta1 == 0){nreps = 50000}
-  else{nreps <- round(5000/beta1)}
+  else{nreps <- round(5000/(5*beta1))}
   beta[1] <- beta1
   F.quantile <- qf(1 - alpha_ov, p, (n - p - 1))
   cc <- p / (n - p - 1) * F.quantile
-  scaling <- mean(Zs[As >= cc*Zs])
   pvals.sel <- rep(NA, nreps)
   compute_F <- rep(FALSE, nreps)
-  sigma_est <- rep(NA, nreps)
   for(i in 1:nreps){
     X <- matrix(rnorm(n * p), ncol = p)
     y  <- X %*%beta+rnorm(n)*sigma
@@ -137,18 +118,10 @@ pr_reject_sel <- function(beta1,n,p,alpha_ov,sigma=1,oracle=TRUE){
     U <- svd(X)$u
     yPy <- sum((t(U)%*%y)^2)
     rss <- sum(y^2) - yPy
-    if (oracle == TRUE){
-      sigma_sq <- sigma^2
-    }
-    else{
-      sigma_sq <- rss/scaling
-    }
     F_overall <- (n-p-1)/p * yPy/rss
     if(F_overall >= F.quantile){
       compute_F[i] = TRUE
-      sigma_est[i] <- sigma_sq
-      pselb <- lmFScreen:::get_pselb(X=X,y=y,sigma_sq=sigma_sq,yPy=yPy,rss=rss,
-                                     alpha_ov=alpha_ov,min_select=50,seed=i) # from lmFScreen package
+      pselb <- get_pselb(X=X,y=y,alpha_ov=alpha_ov,min_select=50) # from lmFScreen package
       pvals.sel[i] <- pselb(0)
     }
   }
@@ -159,8 +132,8 @@ pr_reject_sel <- function(beta1,n,p,alpha_ov,sigma=1,oracle=TRUE){
 }
 
 
-compute_psel <- function(alpha_ov, beta1_val, oracle = TRUE) {
-  pr_reject <- pr_reject_sel(beta1 = beta1_val, n = 100, p = 10, alpha_ov = alpha_ov, oracle = oracle)
+compute_psel <- function(alpha_ov, beta1_val) {
+  pr_reject <- pr_reject_sel(beta1 = beta1_val, n = 100, p = 10, alpha_ov = alpha_ov)
   return(c(pr_reject[1], pr_reject[2]))
 }
 
@@ -172,13 +145,11 @@ compute_psplit <- function(alpha_ov, beta1_val) {
 run_simulation <- function(beta1_val) {
   print(beta1_val)
   alpha_levels <- c(0.05, 0.1, 0.5)
-  results_psel <- sapply(alpha_levels, function(a) compute_psel(a, beta1_val, oracle = TRUE))
-  results_psel_hat <- sapply(alpha_levels, function(a) compute_psel(a, beta1_val, oracle = FALSE))
+  results_psel <- sapply(alpha_levels, function(a) compute_psel(a, beta1_val))
   results_psplit <- sapply(alpha_levels, function(a) compute_psplit(a, beta1_val))
   return(list(
     pr_reject_overall = results_psel[2, ],
     pr_reject_sel = results_psel[1, ],
-    pr_reject_sel_hat = results_psel_hat[1, ],
     pr_reject_split = results_psplit[1, ],
     pr_reject_train = results_psplit[2, ]
   ))
@@ -197,10 +168,6 @@ pr_reject_overall_5  <- sapply(results, function(res) res$pr_reject_overall[[3]]
 pr_reject_sel_05     <- sapply(results, function(res) res$pr_reject_sel[[1]])
 pr_reject_sel_1      <- sapply(results, function(res) res$pr_reject_sel[[2]])
 pr_reject_sel_5      <- sapply(results, function(res) res$pr_reject_sel[[3]])
-
-pr_reject_sel_hat_05 <- sapply(results, function(res) res$pr_reject_sel_hat[[1]])
-pr_reject_sel_hat_1  <- sapply(results, function(res) res$pr_reject_sel_hat[[2]])
-pr_reject_sel_hat_5  <- sapply(results, function(res) res$pr_reject_sel_hat[[3]])
 
 pr_reject_split_05   <- sapply(results, function(res) res$pr_reject_split[[1]])
 pr_reject_split_1    <- sapply(results, function(res) res$pr_reject_split[[2]])
@@ -227,13 +194,10 @@ plot(beta1, pr_reject_split_05, ylim=c(0, 1),pch=2, type = "b",xlab=expression("
 abline(h=0.05, col="darkgrey", lty=2)
 points(beta1, pr_reject_split_1, ylim=c(0, 1), pch=2,type = "b", lty = 2, col="#E69F00")
 points(beta1, pr_reject_split_5, ylim=c(0, 1), pch=2,type = "b", col="#E69F00")
-points(beta1, pr_reject_sel_hat_05, ylim=c(0, 1), type = "b", lty = 3,col="#0072B2")
-points(beta1, pr_reject_sel_hat_1, ylim=c(0, 1), type = "b", lty = 2, col="#0072B2")
-points(beta1, pr_reject_sel_hat_5, ylim=c(0, 1), type = "b", col="#0072B2")
 points(beta1, pr_reject_sel_05, ylim=c(0, 1),pch = 4, type = "b", lty = 3, col= "#009E73")
 points(beta1, pr_reject_sel_1, ylim=c(0, 1), pch = 4, type = "b", lty = 2, col= "#009E73")
 points(beta1, pr_reject_sel_5, ylim=c(0, 1), pch = 4, type = "b", col= "#009E73")
-legend("bottomright", pch = c(4, 1, 2, NA, NA,NA), col=c( "#009E73",  "#0072B2","#E69F00","black", "black", "black"), c(expression(p[H[0]^M*"|"*E]), expression(p[H[0]^M*"|"*E]^{tilde(sigma)^2}), bquote(p[H[0]^M]^{scriptscriptstyle("test")}), expression(alpha[0] == 0.05), expression(alpha[0] == 0.1), expression(alpha[0] == 0.5)), lty = c(NA, NA, NA, 3,2,1))
+legend("bottomright", pch = c(4, 2, NA, NA,NA), col=c( "#009E73","#E69F00","black", "black", "black"), c(expression(p[H[0]^M*"|"*E]), bquote(p[H[0]^M]^{scriptscriptstyle("test")}), expression(alpha[0] == 0.05), expression(alpha[0] == 0.1), expression(alpha[0] == 0.5)), lty = c(NA, NA, 3,2,1))
 
 
 ################################ final plot #########################################
@@ -243,11 +207,9 @@ pdf("power_t1error_global_null.pdf", width = 8, height = 3)
 par(mfrow = c(1, 3), pty = "s")
 
 plot(theorqs, empqs.naive, type = "l", lwd=3, xlab = "Uniform Theoretical Quantiles", ylab = "Empirical Quantiles", xlim = c(0, 1), ylim = c(0, 1), col = "black")
-lines(theorqs, empqs.oracle, lwd=3, col = "purple2")
-lines(theorqs, empqs.DB, lwd=3, col = "blue")
-lines(theorqs, empqs.plugin,lwd=3, col = "lightblue")
+lines(theorqs, empqs, lwd=3, col = "purple2")
 segments(0, 0, 1, 1, col = "red")
-legend("topleft", pch=15, col=c("black", "purple2", "blue" , "lightblue"), c(expression(p[H[0]^M]), expression(p[H[0]^M*"|"*E]), expression(p[H[0]^M*"|"*E]^{tilde(sigma)^2}), expression(p[H[0]^M*"|"*E]^{hat(sigma)^2})))
+legend("topleft", pch=15, col=c("black", "purple2"), c(expression(p[H[0]^M]), expression(p[H[0]^M*"|"*E])))
 
 
 plot(beta1, pr_reject_train_05, ylim=c(0, 1), pch=2,type = "b",xlab=expression("Values of " ~ beta[1]), ylab="Probability of rejecting overall F-test", lty = 3,col="#E69F00")
@@ -262,13 +224,10 @@ plot(beta1, pr_reject_split_05, ylim=c(0, 1),pch=2, type = "b",xlab=expression("
 abline(h=0.05, col="darkgrey", lty=2)
 points(beta1, pr_reject_split_1, ylim=c(0, 1), pch=2,type = "b", lty = 2, col="#E69F00")
 points(beta1, pr_reject_split_5, ylim=c(0, 1), pch=2,type = "b", col="#E69F00")
-points(beta1, pr_reject_sel_hat_05, ylim=c(0, 1), type = "b", lty = 3,col="#0072B2")
-points(beta1, pr_reject_sel_hat_1, ylim=c(0, 1), type = "b", lty = 2, col="#0072B2")
-points(beta1, pr_reject_sel_hat_5, ylim=c(0, 1), type = "b", col="#0072B2")
 points(beta1, pr_reject_sel_05, ylim=c(0, 1),pch = 4, type = "b", lty = 3, col= "#009E73")
 points(beta1, pr_reject_sel_1, ylim=c(0, 1), pch = 4, type = "b", lty = 2, col= "#009E73")
 points(beta1, pr_reject_sel_5, ylim=c(0, 1), pch = 4, type = "b", col= "#009E73")
-legend("bottomright", pch = c(4, 1, 2, NA, NA,NA), col=c( "#009E73",  "#0072B2","#E69F00","black", "black", "black"), c(expression(p[H[0]^M*"|"*E]), expression(p[H[0]^M*"|"*E]^{tilde(sigma)^2}), bquote(p[H[0]^M]^{scriptscriptstyle("test")}), expression(alpha[0] == 0.05), expression(alpha[0] == 0.1), expression(alpha[0] == 0.5)), lty = c(NA, NA, NA, 3,2,1),bg = "white")
+legend("bottomright", pch = c(4, 2, NA, NA,NA), col=c( "#009E73", "#E69F00","black", "black", "black"), c(expression(p[H[0]^M*"|"*E]), bquote(p[H[0]^M]^{scriptscriptstyle("test")}), expression(alpha[0] == 0.05), expression(alpha[0] == 0.1), expression(alpha[0] == 0.5)), lty = c(NA, NA, 3,2,1),bg = "white")
 
 
 dev.off()

@@ -17,7 +17,7 @@ library(tidyr)
 library(dplyr)
 library(patchwork)
 
-set.seed(1)
+set.seed(123)
 
 # Set parameters
 n <- 100
@@ -152,7 +152,7 @@ print(p1)
 
 ########################## widths, changing beta1 #########################
 
-n_iter <- 500
+n_iter <- 1000
 
 beta1_values <- seq(-1, 1, length.out = 40)  # True beta1 values
 alpha_ci <- 0.05  # Only compute 95% CIs

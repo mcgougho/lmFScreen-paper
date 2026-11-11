@@ -251,43 +251,104 @@ points(theorqs, empqs.tn, type = "l", lwd=3, col = "#009E73")
 points(theorqs, empqs.tn_conserv, type = "l", lwd=3, col = "#0072B2")
 points(theorqs, empqs.tn_switch, type = "l", lwd=3, col = "orange")
 segments(0, 0, 1, 1, col = "red")
-legend("topleft", pch=15, col=c("black", "lightpink","#009E73", "#0072B2", "orange"), c("Our proposal",expression("Heller's proposal (" * sigma^2 * ")"), expression("Heller's proposal (" * hat(sigma)^2 * ")"), expression("Heller's proposal (" * tilde(sigma)^2 * ")"), expression("Heller's proposal (" * breve(sigma)^2 * ")")))
+#legend("topleft", pch=15, col=c("black", "lightpink","#009E73", "#0072B2", "orange"), c("Our proposal",expression("Heller's proposal (" * sigma^2 * ")"), expression("Heller's proposal (" * hat(sigma)^2 * ")"), expression("Heller's proposal (" * tilde(sigma)^2 * ")"), expression("Heller's proposal (" * breve(sigma)^2 * ")")))
+
 
 
 ######################### final plot ########################
 
-pdf("heller_figs.pdf", width = 8, height = 3)
+pdf("heller_figs.pdf", width = 8.5, height = 4)
 
-layout(matrix(1:3, nrow = 1),
-       widths = c(1, 1, 0.5))
 
-# --- plot 1 ---
-par(mar = c(4, 4, 1.5, 1), pty = "s")
+par(mfrow = c(1, 2), pty = "s")
+
+# Color-blind-friendly palette
+col_oracle  <- "lightpink"
+col_plugin  <- "#009E73"
+col_conserv <- "#0072B2"
+col_ours    <- "black"
+col_ref     <- "red"
+
+# ============================================================
+# Panel 1: F-test versus chi-squared test
+# ============================================================
+
+par(mar = c(4, 4, 1, 1))
+
 plot(pvals_F, pvals_chisq_oracle,
-     xlab = "F-statistic p-values",
-     ylab = "Chi-squared p-values",
-     xlim = c(0,1), ylim = c(0,1),
-     pch = 16, cex = 0.5, col = "lightpink")
+     xlab = "F-test p-value",
+     ylab = expression(chi^2 * "-test p-value"),
+     xlim = c(0, 1), ylim = c(0, 1),
+     pch = 16, cex = 0.4, col = col_oracle)
+
 points(pvals_F, pvals_chisq_conserv,
-       pch = 16, cex = 0.5, col = "#0072B2")
+       pch = 16, cex = 0.4, col = col_conserv)
+
 points(pvals_F, pvals_chisq_plugin,
-       pch = 16, cex = 0.5, col = "#009E73")
-abline(0, 1, col = "red", lwd =2)
-abline(h = 0.05, col = "red", lty = 2, lwd =2)
-abline(v = 0.05, col = "red", lty = 2, lwd =2)
+       pch = 16, cex = 0.4, col = col_plugin)
 
-# --- plot 2 ---
-par(mar = c(4, 4, 1.5, 1), pty = "s")
-plot(theorqs, empqs.fs, type = "l", lwd=3, xlab = "Uniform Theoretical Quantiles", ylab = "Empirical Quantiles", xlim = c(0, 1), ylim = c(0, 1), col = "black")
-points(theorqs, empqs.tn_oracle, type = "l", lwd=3, col = "lightpink")
-points(theorqs, empqs.tn, type = "l", lwd=3, col = "#009E73")
-points(theorqs, empqs.tn_conserv, type = "l", lwd=3, col = "#0072B2")
-segments(0, 0, 1, 1, col = "red")
+abline(0, 1, col = col_ref, lwd = 1.5)
+abline(h = 0.05, col = col_ref, lty = 2, lwd = 1.5)
+abline(v = 0.05, col = col_ref, lty = 2, lwd = 1.5)
 
-# --- legend panel ---
-par(mar = c(0, 0, 0, 0))
-plot.new()
-legend("center", pch=15, col=c("black", "lightpink","#009E73", "#0072B2"), c("(i) Our proposal",expression("(ii) Heller's proposal (" * sigma^2 * ")"), expression("(iii) Heller's proposal (" * hat(sigma)^2 * ")"), expression("(iv) Heller's proposal (" * tilde(sigma)^2 * ")")))
+legend(
+  "bottomright",
+  legend = c(
+    expression("Known " * sigma^2),
+    expression("Plug-in " * hat(sigma)^2),
+    expression("Conservative " * tilde(sigma)^2)
+  ),
+  col = c(col_oracle, col_plugin, col_conserv),
+  pch = 16,
+  pt.cex = 0.9,
+  bty = "o",
+  bg = "white",
+  box.col = "black",
+  box.lwd = 0.8,
+  cex = 0.8,
+  inset = 0.02
+)
 
+# ============================================================
+# Panel 2: Selective p-value QQ plot
+# ============================================================
+
+par(mar = c(4, 4, 1, 1))
+
+plot(theorqs, empqs.fs,
+     type = "l", lwd = 2.5,
+     xlab = "Uniform theoretical quantiles",
+     ylab = "Empirical quantiles",
+     xlim = c(0, 1), ylim = c(0, 1),
+     col = col_ours)
+
+lines(theorqs, empqs.tn_oracle,
+      lwd = 2, col = col_oracle)
+
+lines(theorqs, empqs.tn,
+      lwd = 2, col = col_plugin)
+
+lines(theorqs, empqs.tn_conserv,
+      lwd = 2, col = col_conserv)
+
+abline(0, 1, col = col_ref, lwd = 1.5)
+
+legend(
+  "bottomright",
+  legend = c(
+    "Our proposal",
+    expression("Known " * sigma^2),
+    expression("Plug-in " * hat(sigma)^2),
+    expression("Conservative " * tilde(sigma)^2)
+  ),
+  col = c(col_ours, col_oracle, col_plugin, col_conserv),
+  lty = 1,
+  lwd = c(2.5, 2, 2, 2),
+  bty = "o",
+  bg = "white",
+  box.col = "black",
+  box.lwd = 0.8,
+  cex = 0.8,
+  inset = 0.02
+)
 dev.off()
-
